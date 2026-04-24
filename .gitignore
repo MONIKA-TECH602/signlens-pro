@@ -1,0 +1,33 @@
+# Do NOT upload these to GitHub
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment folder
+venv/
+env/
+.venv/
+
+# Dataset (very large, don't update)
+dataset/asl_alphabet_test
+dataset/asl_alphabet_train
+dataset/data.csv
+dataset/*.csv
+
+
+# Temp video files
+tmp_*.mp4
+temp_upload.*
+
+# Database (personal data)
+signlens.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/

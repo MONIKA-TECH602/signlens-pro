@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SignLens PRO — ASL Sign Language Translator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0a0f1e; --ink2:#1a2332; --ink3:#243047;
+  --sky:#1a6ef0; --sky2:#4b8ff8; --sky3:#c7dffe;
+  --sun:#f0a020; --sun2:#f8c050; --sun3:#fef0cc;
+  --mint:#0ea472; --rose:#e83a4c;
+  --paper:#ffffff; --cloud:#f4f7fc; --mist:#e8edf5;
+  --slate:#5c6b80; --fog:#96a5b8; --line:#dce4ef;
+  --serif:'Instrument Serif',serif;
+  --sans:'Plus Jakarta Sans',sans-serif;
+  --mono:'DM Mono',monospace;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);overflow-x:hidden}
+
+/* ══ NAV ══════════════════════════════════════════════ */
+nav{position:fixed;inset:0 0 auto;z-index:100;height:62px;
+  display:flex;align-items:center;justify-content:space-between;padding:0 60px;
+  background:rgba(255,255,255,.94);backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--line);box-shadow:0 1px 10px rgba(10,15,30,.06)}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+.nav-logo-icon{width:34px;height:34px;border-radius:10px;font-size:18px;
+  background:linear-gradient(135deg,var(--sky),#0d4ecf);
+  display:flex;align-items:center;justify-content:center}
+.nav-brand{font-family:var(--serif);font-size:1.22rem;font-style:italic;letter-spacing:-.01em}
+.nav-brand b{font-style:normal;color:var(--sky)}
+.nav-links{display:flex;align-items:center;gap:2px}
+.nav-a{padding:7px 15px;border-radius:8px;font-size:.84rem;font-weight:500;
+  color:var(--slate);text-decoration:none;transition:all .18s}
+.nav-a:hover{color:var(--ink);background:var(--cloud)}
+.nav-cta{padding:9px 22px;border-radius:9px;font-size:.85rem;font-weight:700;
+  background:var(--sky);color:#fff;text-decoration:none;
+  box-shadow:0 3px 12px rgba(26,110,240,.3);transition:all .2s}
+.nav-cta:hover{background:#1459d4;transform:translateY(-1px);box-shadow:0 5px 18px rgba(26,110,240,.4)}
+
+/* ══ HERO ══════════════════════════════════════════════ */
+.hero{
+  min-height:100vh;padding:100px 60px 80px;
+  background:var(--ink);position:relative;overflow:hidden;display:flex;align-items:center}
+/* Gradient mesh background */
+.hero::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 70% 50%,rgba(26,110,240,.22),transparent),
+             radial-gradient(ellipse 60% 80% at 10% 80%,rgba(240,160,32,.1),transparent),
+             radial-gradient(ellipse 40% 40% at 85% 15%,rgba(14,164,114,.1),transparent),
+             linear-gradient(170deg,#0a0f1e 0%,#0f1a30 50%,#0a1526 100%)}
+/* Dot grid */
+.hero::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1px);
+  background-size:36px 36px}
+
+.hero-inner{max-width:1200px;margin:0 auto;width:100%;
+  display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center;position:relative;z-index:1}
+
+/* Left side */
+.hero-eyebrow{display:inline-flex;align-items:center;gap:7px;margin-bottom:26px;
+  padding:5px 14px;border-radius:999px;
+  border:1px solid rgba(240,160,32,.35);background:rgba(240,160,32,.08);
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;
+  color:var(--sun2);text-transform:uppercase}
+.hero-eyebrow-dot{width:6px;height:6px;border-radius:50%;
+  background:var(--sun2);box-shadow:0 0 8px var(--sun2);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+h1{font-family:var(--serif);font-size:clamp(2.8rem,4.5vw,4.4rem);
+  color:#fff;line-height:1.08;margin-bottom:22px;letter-spacing:-.02em}
+h1 .accent{color:var(--sun2);font-style:italic}
+h1 .accent2{color:var(--sky3)}
+.hero-desc{font-size:1.02rem;color:rgba(255,255,255,.55);line-height:1.85;
+  font-weight:300;max-width:480px;margin-bottom:40px}
+
+.hero-btns{display:flex;gap:12px;flex-wrap:wrap}
+.hbtn1{display:inline-flex;align-items:center;gap:8px;
+  padding:13px 28px;border-radius:10px;font-size:.9rem;font-weight:700;
+  background:var(--sun);color:var(--ink);text-decoration:none;
+  box-shadow:0 4px 16px rgba(240,160,32,.4);transition:all .22s}
+.hbtn1:hover{background:var(--sun2);transform:translateY(-2px);box-shadow:0 7px 24px rgba(240,160,32,.5)}
+.hbtn2{display:inline-flex;align-items:center;gap:8px;
+  padding:13px 28px;border-radius:10px;font-size:.9rem;font-weight:600;
+  border:1.5px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);text-decoration:none;transition:all .22s}
+.hbtn2:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.07)}
+
+.hero-numbers{display:flex;gap:32px;margin-top:40px;padding-top:36px;
+  border-top:1px solid rgba(255,255,255,.09)}
+.hn .val{font-family:var(--serif);font-size:2.2rem;color:var(--sun2);line-height:1}
+.hn .lbl{font-size:.72rem;color:rgba(255,255,255,.38);margin-top:4px;font-family:var(--mono)}
+
+/* Right side — feature cards */
+.hero-right{display:flex;flex-direction:column;gap:13px}
+.hcard{padding:20px 22px;border-radius:14px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  backdrop-filter:blur(14px);transition:all .28s;cursor:default}
+.hcard:hover{background:rgba(255,255,255,.1);transform:translateX(-4px);
+  border-color:rgba(255,255,255,.18)}
+.hcard-row{display:flex;align-items:center;gap:12px;margin-bottom:7px}
+.hcard-emoji{font-size:1.5rem}
+.hcard-title{font-size:.92rem;font-weight:700;color:#fff}
+.hcard-body{font-size:.77rem;color:rgba(255,255,255,.47);line-height:1.7}
+.hcard-tag{display:inline-block;margin-top:8px;padding:2px 10px;border-radius:999px;
+  font-family:var(--mono);font-size:.62rem;font-weight:600}
+.tag-sun{background:rgba(240,160,32,.18);color:var(--sun2);border:1px solid rgba(240,160,32,.3)}
+.tag-sky{background:rgba(26,110,240,.18);color:var(--sky3);border:1px solid rgba(26,110,240,.3)}
+.tag-mint{background:rgba(14,164,114,.18);color:#34d3a0;border:1px solid rgba(14,164,114,.3)}
+
+/* ══ METRICS BAND ═══════════════════════════════════════ */
+.band{background:var(--cloud);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:48px 60px}
+.band-inner{max-width:960px;margin:0 auto;
+  display:grid;grid-template-columns:repeat(4,1fr)}
+.band-item{text-align:center;padding:0 12px;position:relative}
+.band-item+.band-item::before{content:'';position:absolute;left:0;top:12%;height:76%;width:1px;background:var(--line)}
+.band-val{font-family:var(--serif);font-size:2.8rem;color:var(--sky);line-height:1;margin-bottom:6px}
+.band-lbl{font-size:.78rem;color:var(--slate)}
+
+/* ══ FEATURES SECTION ════════════════════════════════════ */
+.section{padding:96px 60px}
+.sec-inner{max-width:1080px;margin:0 auto}
+.sec-label{display:inline-flex;align-items:center;gap:8px;margin-bottom:12px;
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;color:var(--sky);text-transform:uppercase}
+.sec-label::before{content:'';width:24px;height:1.5px;background:var(--sky)}
+.sec-title{font-family:var(--serif);font-size:clamp(2rem,3vw,2.9rem);
+  color:var(--ink);line-height:1.15;margin-bottom:12px}
+.sec-title i{color:var(--sky)}
+.sec-sub{font-size:.93rem;color:var(--slate);line-height:1.85;max-width:520px;margin-bottom:52px}
+
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.feat{padding:28px 24px;border-radius:16px;border:2px solid var(--line);
+  background:var(--paper);transition:all .26s;position:relative;overflow:hidden}
+.feat::after{content:'';position:absolute;inset:0;opacity:0;
+  background:linear-gradient(135deg,rgba(26,110,240,.04),transparent);transition:opacity .3s}
+.feat:hover{border-color:var(--sky2);box-shadow:0 10px 36px rgba(26,110,240,.1);transform:translateY(-4px)}
+.feat:hover::after{opacity:1}
+.feat-icon{width:50px;height:50px;border-radius:13px;margin-bottom:18px;
+  display:flex;align-items:center;justify-content:center;font-size:22px}
+.fi-sky{background:rgba(26,110,240,.1)} .fi-sun{background:rgba(240,160,32,.1)} .fi-mint{background:rgba(14,164,114,.1)}
+.feat-name{font-weight:700;font-size:.95rem;color:var(--ink);margin-bottom:8px}
+.feat-text{font-size:.79rem;color:var(--slate);line-height:1.85}
+
+/* ══ ACCURACY SHOWCASE ═══════════════════════════════════ */
+.acc-section{background:var(--ink);padding:96px 60px}
+.acc-inner{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+.acc-section .sec-label{color:var(--sun2)}
+.acc-section .sec-label::before{background:var(--sun2)}
+.acc-section .sec-title{color:#fff}
+.acc-section .sec-title i{color:var(--sun2)}
+.acc-section .sec-sub{color:rgba(255,255,255,.5)}
+.acc-bars{display:flex;flex-direction:column;gap:14px}
+.acc-row{display:flex;flex-direction:column;gap:5px}
+.acc-meta{display:flex;justify-content:space-between;font-size:.78rem}
+.acc-ltr{color:rgba(255,255,255,.8);font-weight:600}
+.acc-pct{color:var(--sun2);font-family:var(--mono);font-size:.72rem}
+.acc-track{height:7px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+.acc-fill{height:100%;border-radius:4px;
+  background:linear-gradient(90deg,var(--sky),var(--mint));
+  box-shadow:0 0 8px rgba(26,110,240,.4)}
+
+/* ══ TECH STACK ══════════════════════════════════════════ */
+.tech-section{padding:96px 60px;background:var(--cloud)}
+.tech-inner{max-width:1080px;margin:0 auto;text-align:center}
+.tech-pills{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:36px}
+.tech-pill{padding:10px 20px;border-radius:999px;font-family:var(--mono);font-size:.76rem;
+  border:1.5px solid var(--line);color:var(--slate);background:var(--paper);transition:all .2s}
+.tech-pill:hover{border-color:var(--sky);color:var(--sky);background:rgba(26,110,240,.04)}
+
+/* ══ CTA ════════════════════════════════════════════════ */
+.cta{padding:100px 60px;text-align:center}
+.cta .sec-label{justify-content:center}
+.cta .sec-title{text-align:center;max-width:600px;margin:0 auto 14px}
+.cta .sec-sub{margin:0 auto 44px;text-align:center}
+.cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.cta-p{padding:14px 32px;border-radius:10px;font-size:.92rem;font-weight:700;
+  background:var(--sky);color:#fff;text-decoration:none;
+  box-shadow:0 4px 14px rgba(26,110,240,.3);transition:all .2s;font-family:var(--sans)}
+.cta-p:hover{background:#1459d4;transform:translateY(-2px);box-shadow:0 7px 22px rgba(26,110,240,.4)}
+.cta-s{padding:14px 32px;border-radius:10px;font-size:.92rem;font-weight:600;
+  border:2px solid var(--line);color:var(--slate);text-decoration:none;transition:all .2s;font-family:var(--sans)}
+.cta-s:hover{border-color:var(--sky);color:var(--sky)}
+
+/* ══ FOOTER ══════════════════════════════════════════════ */
+footer{background:var(--ink);padding:36px 60px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.foot-brand{font-family:var(--serif);font-size:1.1rem;font-style:italic;color:#fff}
+.foot-brand b{color:var(--sun2);font-style:normal}
+.foot-links{display:flex;gap:20px}
+.foot-a{font-size:.8rem;color:rgba(255,255,255,.4);text-decoration:none;transition:color .15s}
+.foot-a:hover{color:rgba(255,255,255,.75)}
+.foot-note{font-family:var(--mono);font-size:.67rem;color:rgba(255,255,255,.25)}
+
+@media(max-width:960px){
+  nav{padding:0 20px}
+  .hero{padding:90px 20px 64px}
+  .hero-inner,.acc-inner{grid-template-columns:1fr;gap:36px}
+  .band,.section,.acc-section,.tech-section,.cta{padding:64px 20px}
+  .band-inner{grid-template-columns:1fr 1fr}
+  .feat-grid{grid-template-columns:1fr}
+  footer{padding:28px 20px;flex-direction:column;text-align:center}
+  .foot-links{justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">🤟</div>
+    <div class="nav-brand"><i>Sign</i><b>Lens</b> PRO</div>
+  </a>
+  <div class="nav-links">
+    <a class="nav-a" href="#features">Features</a>
+    <a class="nav-a" href="#accuracy">Accuracy</a>
+    <a class="nav-a" href="#tech">Tech Stack</a>
+    <a class="nav-a" href="app.html">App</a>
+  </div>
+  <a class="nav-cta" href="app.html">Open App →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-eyebrow"><span class="hero-eyebrow-dot"></span>computer vision + ML · 2026</div>
+      <h1>Turn <span class="accent">hand signs</span><br>into <span class="accent2">words</span> instantly</h1>
+      <p class="hero-desc">
+        A complete ASL (American Sign Language) translator that works through your webcam, uploaded photos, or videos.
+        Powered by MediaPipe + Random Forest. No GPU, no cloud, no internet.
+      </p>
+      <div class="hero-btns">
+        <a class="hbtn1" href="app.html">🚀 Start Translating</a>
+        <a class="hbtn2" href="#features">Explore Features ↓</a>
+      </div>
+      <div class="hero-numbers">
+        <div class="hn"><div class="val">99.5%</div><div class="lbl">TEST ACCURACY</div></div>
+        <div class="hn"><div class="val">87K</div><div class="lbl">TRAINING IMAGES</div></div>
+        <div class="hn"><div class="val">29</div><div class="lbl">ASL CLASSES</div></div>
+        <div class="hn"><div class="val">&lt;5ms</div><div class="lbl">INFERENCE TIME</div></div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hcard">
+        <div class="hcard-row"><div class="hcard-emoji">🎥</div><div class="hcard-title">Live Webcam Translation</div></div>
+        <div class="hcard-body">Hold any ASL sign in front of your camera. The system detects, stabilizes, and adds the letter to your sentence automatically.</div>
+        <span class="hcard-tag tag-sun">~10 predictions / second</span>
+      </div>
+      <div class="hcard">
+        <div class="hcard-row"><div class="hcard-emoji">📁</div><div class="hcard-title">Image & Video Upload</div></div>
+        <div class="hcard-body">Drop a photo or video and get instant letter detection. Large phone photos are automatically resized for accurate detection.</div>
+        <span class="hcard-tag tag-sky">JPG · PNG · MP4 · MOV</span>
+      </div>
+      <div class="hcard">
+        <div class="hcard-row"><div class="hcard-emoji">💡</div><div class="hcard-title">Smart Word Suggestions</div></div>
+        <div class="hcard-body">Sign "H" and see: Hello, Hi, Help, Have, Here. Click any suggestion to insert the whole word instantly.</div>
+        <span class="hcard-tag tag-mint">Gets smarter with use</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- METRICS BAND -->
+<div class="band">
+  <div class="band-inner">
+    <div class="band-item"><div class="band-val">99.5%</div><div class="band-lbl">Model accuracy on held-out test set</div></div>
+    <div class="band-item"><div class="band-val">87,000</div><div class="band-lbl">ASL images used for training</div></div>
+    <div class="band-item"><div class="band-val">42</div><div class="band-lbl">Normalized hand landmark features</div></div>
+    <div class="band-item"><div class="band-val">0 GPU</div><div class="band-lbl">Required — runs on any laptop CPU</div></div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="sec-inner">
+    <div class="sec-label">What you get</div>
+    <h2 class="sec-title">Everything in <i>one place</i></h2>
+    <p class="sec-sub">Three input modes, smart sentence building, history, and analytics — all running locally without any subscription.</p>
+    <div class="feat-grid">
+      <div class="feat">
+        <div class="feat-icon fi-sky">🎥</div>
+        <div class="feat-name">Real-Time Webcam</div>
+        <div class="feat-text">Captures frames at 100ms intervals. Stability system waits for 8 matching frames before confirming a letter, preventing false positives.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon fi-sun">📤</div>
+        <div class="feat-name">Image Upload (Fixed)</div>
+        <div class="feat-text">Tries 6 different image sizes and preprocessing combinations to maximize detection. Works with any photo from phone or computer.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon fi-mint">🎬</div>
+        <div class="feat-name">Video Upload</div>
+        <div class="feat-text">Analyzes one frame per second across the video. Deduplicates consecutive same letters to produce a clean sentence.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon fi-sky">✍️</div>
+        <div class="feat-name">Sentence Builder</div>
+        <div class="feat-text">Letters build into words. Press Space to commit a word. Full sentence builds progressively. Copy to clipboard anytime.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon fi-sun">💡</div>
+        <div class="feat-name">Word Suggestions</div>
+        <div class="feat-text">As you sign letters, matching word suggestions appear. Click to insert full words. Frequency-ranked — learns your vocabulary over time.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon fi-mint">🗄️</div>
+        <div class="feat-name">Translation History</div>
+        <div class="feat-text">SQLite database stores every saved session. View history, statistics, most-used letters and words — all local, no internet.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ACCURACY SHOWCASE -->
+<section class="acc-section" id="accuracy">
+  <div class="acc-inner">
+    <div>
+      <div class="sec-label">Model performance</div>
+      <h2 class="sec-title">Nearly perfect <i>accuracy</i></h2>
+      <p class="sec-sub">Random Forest trained on 87,000 images achieves 99.5% on the held-out test set. Most letters score above 98%.</p>
+      <p style="font-size:.83rem;color:rgba(255,255,255,.4);margin-top:16px;line-height:1.8">
+        Real-world webcam accuracy is slightly lower due to lighting variation and different backgrounds — this is called domain shift. The system compensates with CLAHE contrast enhancement and tuned detection thresholds.
+      </p>
+    </div>
+    <div class="acc-bars">
+      <div class="acc-row">
+        <div class="acc-meta"><span class="acc-ltr">A, B, C, D, E, F</span><span class="acc-pct">99–100%</span></div>
+        <div class="acc-track"><div class="acc-fill" style="width:99.5%"></div></div>
+      </div>
+      <div class="acc-row">
+        <div class="acc-meta"><span class="acc-ltr">G, H, I, J, K, L</span><span class="acc-pct">98–100%</span></div>
+        <div class="acc-track"><div class="acc-fill" style="width:99%"></div></div>
+      </div>
+      <div class="acc-row">
+        <div class="acc-meta"><span class="acc-ltr">M, N, O, P, Q, R</span><span class="acc-pct">96–99%</span></div>
+        <div class="acc-track"><div class="acc-fill" style="width:97%"></div></div>
+      </div>
+      <div class="acc-row">
+        <div class="acc-meta"><span class="acc-ltr">S, T, U, V, W, X</span><span class="acc-pct">97–100%</span></div>
+        <div class="acc-track"><div class="acc-fill" style="width:98.5%"></div></div>
+      </div>
+      <div class="acc-row">
+        <div class="acc-meta"><span class="acc-ltr">Y, Z, space, del</span><span class="acc-pct">95–100%</span></div>
+        <div class="acc-track"><div class="acc-fill" style="width:97.5%"></div></div>
+      </div>
+      <div class="acc-row">
+        <div class="acc-meta"><span class="acc-ltr">Overall average</span><span class="acc-pct">99.5%</span></div>
+        <div class="acc-track"><div class="acc-fill" style="width:99.5%"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<section class="tech-section" id="tech">
+  <div class="tech-inner">
+    <div class="sec-label" style="justify-content:center">Technology</div>
+    <h2 class="sec-title" style="text-align:center">Built with <i>free, open-source</i> tools</h2>
+    <p class="sec-sub" style="margin:0 auto;text-align:center">No paid APIs. No subscription. No cloud. Runs entirely offline after setup.</p>
+    <div class="tech-pills">
+      <span class="tech-pill">🐍 Python 3.x</span>
+      <span class="tech-pill">🌶️ Flask + Flask-CORS</span>
+      <span class="tech-pill">👁️ Google MediaPipe</span>
+      <span class="tech-pill">🌲 scikit-learn Random Forest</span>
+      <span class="tech-pill">🔲 OpenCV</span>
+      <span class="tech-pill">🗄️ SQLite (built-in Python)</span>
+      <span class="tech-pill">📊 NumPy + pandas</span>
+      <span class="tech-pill">📈 Matplotlib</span>
+      <span class="tech-pill">🎨 HTML5 + CSS + JavaScript</span>
+      <span class="tech-pill">📦 Kaggle ASL Dataset (87K images)</span>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="sec-inner">
+    <div class="sec-label">Get started</div>
+    <h2 class="sec-title">Ready to <i>translate</i> sign language?</h2>
+    <p class="sec-sub">Open the app, click Start Camera, and sign your first letter. Takes less than 10 seconds.</p>
+    <div class="cta-row">
+      <a class="cta-p" href="app.html">🚀 Open Translator App</a>
+      <a class="cta-s" href="app.html#upload">📁 Try Image Upload</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-brand"><i>Sign</i><b>Lens</b> PRO</div>
+  <div class="foot-links">
+    <a class="foot-a" href="index.html">Home</a>
+    <a class="foot-a" href="app.html">App</a>
+  </div>
+  <div class="foot-note">MediaPipe · Random Forest · Flask · SQLite · No GPU Required</div>
+</footer>
+
+</body>
+</html>

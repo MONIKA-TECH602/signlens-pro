@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SignLens PRO — Translator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0a0f1e;--ink2:#1a2332;
+  --sky:#1a6ef0;--sky2:#4b8ff8;--sky3:#dbeafe;
+  --sun:#f0a020;--sun2:#f8c050;
+  --mint:#0ea472;--rose:#e83a4c;
+  --paper:#fff;--cloud:#f4f7fc;--mist:#edf1f8;
+  --slate:#5c6b80;--fog:#96a5b8;--line:#dce4ef;
+  --sans:'Plus Jakarta Sans',sans-serif;
+  --serif:'Instrument Serif',serif;
+  --mono:'DM Mono',monospace;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--sans);background:var(--cloud);color:var(--ink);display:flex;flex-direction:column}
+
+/* ── TOPBAR ─────────────────────────────────────────── */
+.top{flex-shrink:0;height:54px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;background:var(--paper);border-bottom:1px solid var(--line);
+  box-shadow:0 1px 6px rgba(10,15,30,.05);z-index:50}
+.top-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink)}
+.top-logo-icon{width:30px;height:30px;border-radius:8px;font-size:16px;
+  background:linear-gradient(135deg,var(--sky),#0d4ecf);
+  display:flex;align-items:center;justify-content:center}
+.top-logo-name{font-family:var(--serif);font-size:1.1rem;font-style:italic}
+.top-logo-name b{font-style:normal;color:var(--sky)}
+.top-tabs{display:flex;gap:3px}
+.ttab{padding:6px 16px;border-radius:8px;font-size:.8rem;font-weight:600;
+  cursor:pointer;border:1px solid transparent;transition:all .17s;
+  color:var(--slate);background:transparent}
+.ttab:hover{color:var(--ink);background:var(--cloud)}
+.ttab.active{color:var(--sky);background:rgba(26,110,240,.08);border-color:rgba(26,110,240,.2)}
+.top-right{display:flex;align-items:center;gap:8px}
+.srv-badge{display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;
+  font-family:var(--mono);font-size:.67rem;border:1px solid var(--line);background:var(--cloud);
+  color:var(--slate);transition:all .3s}
+.srv-dot{width:6px;height:6px;border-radius:50%;background:var(--fog)}
+.srv-badge.ok{color:var(--mint);border-color:rgba(14,164,114,.25);background:rgba(14,164,114,.05)}
+.srv-badge.ok .srv-dot{background:var(--mint);box-shadow:0 0 6px var(--mint);animation:blink 2s infinite}
+.srv-badge.err{color:var(--rose);border-color:rgba(232,58,76,.25);background:rgba(232,58,76,.04)}
+.srv-badge.err .srv-dot{background:var(--rose)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.home-btn{padding:5px 14px;border-radius:7px;font-size:.78rem;font-weight:600;
+  text-decoration:none;background:var(--cloud);border:1px solid var(--line);
+  color:var(--slate);transition:all .16s}
+.home-btn:hover{background:var(--mist);color:var(--ink)}
+
+/* ── PAGES ──────────────────────────────────────────── */
+.page{display:none;flex:1;min-height:0;overflow:hidden}
+.page.active{display:grid}
+
+/* Webcam page: left=camera, right=builder+predictions */
+#pg-cam{grid-template-columns:1fr 320px;gap:0}
+/* Upload page: left=drop+preview, right=results */
+#pg-up{grid-template-columns:1fr 340px;gap:0}
+/* History page */
+#pg-hist{grid-template-columns:1fr 280px;gap:0}
+
+/* ── PANEL SHELL ─────────────────────────────────────── */
+.panel{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.panel+.panel{border-left:1px solid var(--line)}
+.panel-hd{flex-shrink:0;padding:10px 18px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;background:var(--paper)}
+.panel-title{font-size:.64rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--fog)}
+.fps-tag{font-family:var(--mono);font-size:.64rem;color:var(--fog)}
+.panel-scroll{flex:1;overflow-y:auto;padding:16px}
+
+/* ── CAMERA ──────────────────────────────────────────── */
+.cam-area{flex:1;position:relative;background:#0a0f1e;min-height:0;overflow:hidden}
+#webcam{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
+#overlay{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;transform:scaleX(-1)}
+.cam-ph{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;background:var(--mist)}
+.cam-ph svg{width:44px;height:44px;opacity:.2;color:var(--sky)}
+.cam-ph p{font-size:.82rem;color:var(--slate);text-align:center;line-height:1.7}
+.cam-bar{position:absolute;bottom:0;left:0;right:0;z-index:4;display:none;
+  align-items:center;justify-content:space-between;padding:8px 13px;
+  background:linear-gradient(transparent,rgba(10,15,30,.85))}
+.hpill{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;
+  background:rgba(255,255,255,.12);backdrop-filter:blur(8px);
+  font-family:var(--mono);font-size:.68rem;color:#fff;border:1px solid rgba(255,255,255,.15)}
+.hdot{width:6px;height:6px;border-radius:50%}
+.hdot.on{background:#34d399;box-shadow:0 0 6px #34d399;animation:blink 1.5s infinite}
+.hdot.off{background:rgba(255,255,255,.3)}
+
+/* ── CAM CONTROLS ────────────────────────────────────── */
+.cam-ctrl{flex-shrink:0;padding:10px 14px;border-top:1px solid var(--line);
+  background:var(--paper);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.btn{padding:7px 13px;border-radius:8px;font-family:var(--mono);font-size:.7rem;font-weight:500;
+  cursor:pointer;border:1px solid var(--line);background:var(--cloud);color:var(--slate);
+  transition:all .15s;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.btn:hover:not(:disabled){background:var(--mist);color:var(--ink)}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.btn.go{background:var(--sky);border-color:var(--sky);color:#fff;font-weight:700;
+  box-shadow:0 2px 10px rgba(26,110,240,.3)}
+.btn.go:hover:not(:disabled){background:#1459d4;box-shadow:0 4px 16px rgba(26,110,240,.4)}
+.btn.live{background:rgba(14,164,114,.1);border-color:rgba(14,164,114,.3);color:var(--mint)}
+.btn.danger:not(:disabled):hover{background:rgba(232,58,76,.07);color:var(--rose);border-color:rgba(232,58,76,.25)}
+.btn.amber{background:rgba(240,160,32,.1);border-color:rgba(240,160,32,.3);color:var(--sun)}
+.btn.amber:not(:disabled):hover{background:rgba(240,160,32,.2)}
+
+/* Settings accordion */
+.settings-acc{flex-shrink:0;border-top:1px solid var(--line);background:var(--cloud)}
+.settings-tog{width:100%;padding:7px 14px;display:flex;align-items:center;justify-content:space-between;
+  font-family:var(--mono);font-size:.62rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--fog);cursor:pointer;border:none;background:transparent;transition:color .15s}
+.settings-tog:hover{color:var(--slate)}
+.settings-tog .arr{transition:transform .2s}
+.settings-tog.open .arr{transform:rotate(180deg)}
+.settings-body{display:none;padding:10px 14px 14px;border-top:1px solid var(--line)}
+.settings-body.open{display:block}
+.srow{margin-bottom:9px}
+.slbl{display:flex;justify-content:space-between;font-size:.67rem;color:var(--slate);margin-bottom:4px}
+.sval{color:var(--sky);font-family:var(--mono);font-size:.63rem}
+input[type=range]{width:100%;accent-color:var(--sky);cursor:pointer;height:3px}
+.shints{display:flex;justify-content:space-between;font-size:.55rem;color:var(--fog);margin-top:2px}
+
+/* ── RIGHT PANEL — SENTENCE + PREDICTIONS ─────────────── */
+.rp{display:flex;flex-direction:column;overflow:hidden}
+
+/* Detected letter */
+.det-block{padding:14px 16px;border-bottom:1px solid var(--line)}
+.det-row{display:flex;align-items:center;gap:12px;padding:10px 13px;
+  background:var(--cloud);border-radius:12px;border:1px solid var(--line);margin-bottom:10px}
+.det-big{font-family:var(--serif);font-size:3rem;color:var(--sky);
+  min-width:46px;text-align:center;line-height:1;transition:color .1s}
+.det-big.flash{color:var(--mint)}
+.det-info{flex:1}
+.det-name{font-size:.7rem;color:var(--slate);margin-bottom:4px;font-weight:600}
+.cbar{display:flex;align-items:center;gap:7px}
+.ctrack{flex:1;height:4px;background:var(--mist);border-radius:2px;overflow:hidden}
+.cfill{height:100%;background:linear-gradient(90deg,var(--sky),var(--mint));border-radius:2px;transition:width .2s}
+.cpct{font-family:var(--mono);font-size:.62rem;color:var(--fog);min-width:26px;text-align:right}
+
+/* Stability */
+.stab-row{display:flex;align-items:center;gap:7px;margin-bottom:10px}
+.stab-lbl{font-family:var(--mono);font-size:.57rem;color:var(--fog);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+.stab-track{flex:1;height:6px;background:var(--mist);border-radius:3px;overflow:hidden}
+.stab-fill{height:100%;background:var(--sky);border-radius:3px;transition:width .08s linear}
+.stab-n{font-family:var(--mono);font-size:.57rem;color:var(--sky);min-width:34px;text-align:right}
+
+/* Word + sentence */
+.word-row{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.word-lbl{font-family:var(--mono);font-size:.57rem;color:var(--fog);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.word-val{font-family:var(--mono);font-size:1rem;font-weight:600;color:var(--ink);word-break:break-all}
+.cursor{display:inline-block;width:2px;height:.85em;background:var(--sky);margin-left:1px;animation:blink 1s step-end infinite;vertical-align:text-bottom}
+
+.sent-lbl{font-family:var(--mono);font-size:.57rem;color:var(--fog);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+.sent-area{background:var(--cloud);border:1px solid var(--line);border-radius:10px;
+  padding:9px 12px;min-height:48px;max-height:80px;overflow-y:auto;
+  font-family:var(--mono);font-size:.88rem;line-height:1.7;color:var(--ink);word-break:break-word}
+.sent-area:empty::after{content:'Sign letters to build words...';color:var(--fog);font-style:italic;font-size:.74rem}
+
+/* Suggestions */
+.sugg-block{padding:10px 16px;border-bottom:1px solid var(--line);background:var(--cloud)}
+.sugg-lbl{font-family:var(--mono);font-size:.57rem;color:var(--fog);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.sugg-pills{display:flex;gap:5px;flex-wrap:wrap;min-height:26px}
+.sug{padding:4px 11px;border-radius:999px;font-family:var(--mono);font-size:.72rem;
+  background:var(--paper);border:1px solid var(--line);color:var(--slate);cursor:pointer;transition:all .15s}
+.sug:hover{background:var(--sky);border-color:var(--sky);color:#fff}
+.sug.empty{color:var(--fog);cursor:default;font-size:.64rem;font-style:italic;background:transparent;border:none}
+
+/* Sentence actions */
+.sent-actions{display:flex;gap:5px;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
+.sab{padding:6px 12px;border-radius:8px;font-family:var(--mono);font-size:.67rem;
+  cursor:pointer;border:1px solid var(--line);background:var(--cloud);color:var(--slate);transition:all .14s;
+  display:flex;align-items:center;gap:4px}
+.sab:hover:not(:disabled){background:var(--mist);color:var(--ink)}
+.sab:disabled{opacity:.25;cursor:not-allowed}
+.sab.add{background:rgba(26,110,240,.08);border-color:rgba(26,110,240,.25);color:var(--sky)}
+.sab.add:hover:not(:disabled){background:rgba(26,110,240,.16)}
+.sab.save{background:rgba(14,164,114,.08);border-color:rgba(14,164,114,.25);color:var(--mint)}
+.sab.save:hover:not(:disabled){background:rgba(14,164,114,.16)}
+.sab.copy{border-color:rgba(26,110,240,.2);color:var(--sky2)}
+.sab.clr{border-color:rgba(232,58,76,.18);color:var(--rose)}
+.sab.clr:hover:not(:disabled){background:rgba(232,58,76,.06)}
+kbd{display:inline-block;padding:1px 5px;border-radius:3px;background:var(--mist);
+  border:1px solid var(--line);font-family:var(--mono);font-size:.55rem;color:var(--slate)}
+
+/* Top predictions */
+.pred-block{padding:12px 16px;border-bottom:1px solid var(--line)}
+.block-title{font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--fog);margin-bottom:8px}
+.pred-main{background:var(--cloud);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center;margin-bottom:10px}
+.pred-ltr{font-family:var(--serif);font-size:4.5rem;color:var(--sky);line-height:1;min-height:4.5rem;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.pred-ltr.flash{color:var(--mint)}
+.pred-desc{font-size:.7rem;color:var(--slate);margin-top:4px;min-height:1rem;font-family:var(--mono)}
+.pred-conf{display:flex;align-items:center;gap:7px;margin-top:9px}
+.pc-track{flex:1;height:4px;background:var(--mist);border-radius:2px;overflow:hidden}
+.pc-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--sky),var(--mint));transition:width .22s;width:0%}
+.pc-pct{font-family:var(--mono);font-size:.62rem;color:var(--fog);min-width:26px}
+.rings{display:flex;gap:3px;justify-content:center;margin-top:9px;flex-wrap:wrap}
+.ring{width:7px;height:7px;border-radius:50%;background:var(--mist);transition:all .09s}
+.ring.on{background:var(--sky);box-shadow:0 0 4px rgba(26,110,240,.4)}
+.trow{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.tltr{width:26px;height:26px;border-radius:6px;background:var(--cloud);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;flex-shrink:0;color:var(--slate)}
+.trow:first-child .tltr{background:rgba(26,110,240,.09);border-color:rgba(26,110,240,.22);color:var(--sky)}
+.tbar{flex:1;height:4px;background:var(--mist);border-radius:2px;overflow:hidden}
+.tfill{height:100%;border-radius:2px;background:var(--mist);transition:width .22s}
+.trow:first-child .tfill{background:linear-gradient(90deg,var(--sky),var(--sky2))}
+.tpct{font-family:var(--mono);font-size:.6rem;color:var(--fog);min-width:24px;text-align:right}
+
+/* ── UPLOAD PAGE ─────────────────────────────────────── */
+/* LEFT: drop zone + preview */
+.up-left{display:flex;flex-direction:column;overflow-y:auto;padding:20px;gap:14px}
+.drop-zone{border:2.5px dashed var(--line);border-radius:14px;padding:40px 18px;
+  text-align:center;cursor:pointer;transition:all .22s;background:var(--paper);
+  user-select:none;flex-shrink:0}
+.drop-zone:hover{border-color:var(--sky);background:rgba(26,110,240,.025)}
+.drop-zone.drag{border-color:var(--mint);background:rgba(14,164,114,.03);border-style:solid;transform:scale(1.01)}
+.drop-zone input{display:none}
+.dz-big{font-size:2.6rem;margin-bottom:12px;line-height:1}
+.dz-title{font-size:.95rem;font-weight:700;color:var(--ink);margin-bottom:5px}
+.dz-sub{font-size:.78rem;color:var(--slate);line-height:1.75}
+.dz-types{display:flex;gap:5px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.dz-type{padding:2px 8px;border-radius:999px;font-family:var(--mono);font-size:.61rem;
+  background:var(--cloud);color:var(--slate);border:1px solid var(--line)}
+
+#prev-wrap{display:none;position:relative;border-radius:12px;overflow:hidden;
+  box-shadow:0 2px 12px rgba(10,15,30,.1);flex-shrink:0}
+#prev-img,#prev-vid{width:100%;border-radius:12px;display:none}
+#annot-canvas{width:100%;border-radius:12px;display:none}
+.prev-rm{position:absolute;top:7px;right:7px;width:26px;height:26px;
+  background:rgba(10,15,30,.6);border-radius:50%;border:none;cursor:pointer;
+  color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.prev-rm:hover{background:rgba(232,58,76,.7)}
+
+.prog-wrap{display:none}
+.prog-track{height:4px;background:var(--mist);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--sky),var(--mint));border-radius:2px;width:0%;transition:width .3s}
+.prog-lbl{font-size:.67rem;color:var(--slate);margin-top:5px;font-family:var(--mono)}
+
+.analyze-btn{width:100%;padding:12px;border-radius:10px;border:none;cursor:pointer;
+  background:var(--sky);color:#fff;font-family:var(--sans);font-size:.9rem;font-weight:700;
+  transition:all .2s;box-shadow:0 3px 12px rgba(26,110,240,.28);
+  display:flex;align-items:center;justify-content:center;gap:7px;flex-shrink:0}
+.analyze-btn:hover:not(:disabled){background:#1459d4;transform:translateY(-1px);box-shadow:0 5px 18px rgba(26,110,240,.38)}
+.analyze-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+.fr-results{display:none}
+.fr-title{font-size:.62rem;font-weight:700;letter-spacing:.08em;color:var(--fog);text-transform:uppercase;margin-bottom:7px}
+.fr-grid{display:flex;flex-wrap:wrap;gap:5px}
+.fr-pill{display:flex;align-items:center;gap:3px;padding:3px 8px;border-radius:999px;
+  background:var(--cloud);border:1px solid var(--line);font-size:.7rem}
+.fr-ltr{font-family:var(--mono);font-size:.88rem;font-weight:700;color:var(--sky)}
+.fr-conf{font-family:var(--mono);font-size:.58rem;color:var(--fog)}
+
+.alert{padding:9px 13px;border-radius:9px;font-size:.74rem;display:none;line-height:1.6}
+.alert.warn{background:rgba(240,160,32,.08);border:1px solid rgba(240,160,32,.22);color:var(--sun)}
+.alert.show{display:block}
+
+/* RIGHT: upload results */
+.up-right{display:flex;flex-direction:column;overflow-y:auto;padding:20px;gap:14px;background:var(--cloud)}
+.up-pred-box{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px;text-align:center}
+.up-big{font-family:var(--serif);font-size:4rem;color:var(--sky);line-height:1}
+.up-desc{font-size:.72rem;color:var(--slate);margin-top:4px;font-family:var(--mono)}
+.up-cbar{display:flex;align-items:center;gap:7px;margin-top:10px}
+.txt-card{background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.txt-hd{padding:10px 14px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between}
+.txt-hd-title{font-family:var(--mono);font-size:.62rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--fog)}
+.txt-hd-btns{display:flex;gap:4px}
+.ibtn{width:25px;height:25px;border-radius:6px;background:var(--cloud);border:1px solid var(--line);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--slate);transition:all .14s}
+.ibtn:hover{background:var(--mist);color:var(--ink)}
+#up-txt{min-height:65px;max-height:130px;overflow-y:auto;padding:11px 14px;
+  font-family:var(--mono);font-size:.88rem;line-height:1.9;color:var(--ink);
+  white-space:pre-wrap;word-break:break-word}
+#up-txt:empty::after{content:'Upload a file to see translation...';color:var(--fog);font-style:italic;font-size:.73rem}
+
+/* ── HISTORY PAGE ────────────────────────────────────── */
+.hist-list{overflow-y:auto;padding:14px;flex:1}
+.hist-entry{padding:10px 13px;background:var(--paper);border:1px solid var(--line);
+  border-radius:10px;margin-bottom:7px;position:relative;transition:box-shadow .15s}
+.hist-entry:hover{box-shadow:0 2px 10px rgba(10,15,30,.07)}
+.hist-sent{font-family:var(--mono);font-size:.82rem;color:var(--ink);margin-bottom:4px;padding-right:24px;word-break:break-word}
+.hist-meta{font-size:.61rem;color:var(--fog);display:flex;gap:8px;flex-wrap:wrap}
+.hist-src{padding:1px 7px;border-radius:999px;background:var(--cloud);font-size:.59rem;color:var(--slate)}
+.hist-del{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;
+  background:transparent;border:none;color:var(--fog);cursor:pointer;font-size:11px;
+  display:flex;align-items:center;justify-content:center;transition:all .14s}
+.hist-del:hover{background:rgba(232,58,76,.1);color:var(--rose)}
+.stats-side{overflow-y:auto;padding:16px;background:var(--cloud);border-left:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.stat-box{padding:14px;background:var(--paper);border:1px solid var(--line);border-radius:10px;text-align:center}
+.stat-val{font-family:var(--serif);font-size:2.2rem;color:var(--sky);line-height:1}
+.stat-lbl{font-family:var(--mono);font-size:.58rem;color:var(--fog);margin-top:3px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.word-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.wchip{padding:3px 9px;border-radius:999px;font-family:var(--mono);font-size:.68rem;
+  background:var(--cloud);border:1px solid var(--line);color:var(--slate);display:flex;align-items:center;gap:4px}
+.wchip .wval{font-weight:700;color:var(--sky)}
+.wchip .wfreq{color:var(--fog);font-size:.6rem}
+
+/* ── TOAST ─────────────────────────────────────────── */
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(60px);
+  padding:8px 18px;background:var(--ink);color:#fff;border-radius:999px;
+  font-size:.76rem;font-weight:600;z-index:999;
+  transition:transform .28s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;
+  box-shadow:0 4px 16px rgba(10,15,30,.2)}
+#toast.show{transform:translateX(-50%) translateY(0)}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="top">
+  <a href="index.html" class="top-logo">
+    <div class="top-logo-icon">🤟</div>
+    <div class="top-logo-name"><i>Sign</i><b>Lens</b> PRO</div>
+  </a>
+  <div class="top-tabs">
+    <button class="ttab active" id="ttab-cam"  onclick="switchTab('cam')">🎥 Webcam</button>
+    <button class="ttab"        id="ttab-up"   onclick="switchTab('up')">📁 Upload</button>
+    <button class="ttab"        id="ttab-hist" onclick="switchTab('hist');loadHistory();loadStats()">📋 History</button>
+  </div>
+  <div class="top-right">
+    <div class="srv-badge" id="srv-badge"><div class="srv-dot"></div><span id="srv-txt">Connecting...</span></div>
+    <a href="index.html" class="home-btn">← Home</a>
+  </div>
+</div>
+
+<!-- ═══ WEBCAM PAGE ════════════════════════════════════════════ -->
+<div class="page active" id="pg-cam">
+
+  <!-- LEFT: camera -->
+  <div class="panel">
+    <div class="panel-hd">
+      <span class="panel-title">Live Camera</span>
+      <span class="fps-tag" id="fps-tag">-- FPS</span>
+    </div>
+    <div class="cam-area">
+      <video id="webcam" autoplay playsinline muted style="opacity:0"></video>
+      <canvas id="overlay"></canvas>
+      <div class="cam-ph" id="cam-ph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.362a1 1 0 01-1.447.893L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+        </svg>
+        <p>Click <strong>Start Camera</strong> below<br><span style="font-size:.7rem;opacity:.5">Allow camera access when asked</span></p>
+      </div>
+      <div class="cam-bar" id="cam-bar">
+        <div class="hpill"><div class="hdot off" id="hdot"></div><span id="htext" style="font-family:var(--mono);font-size:.68rem">No hand</span></div>
+        <span style="font-family:var(--mono);font-size:.63rem;color:rgba(255,255,255,.35)" id="fps-bar">-- FPS</span>
+      </div>
+    </div>
+    <div class="cam-ctrl">
+      <button class="btn go" id="btn-start" onclick="startCam()">▶ Start Camera</button>
+      <button class="btn danger" id="btn-stop"  onclick="stopCam()"      disabled>⏹ Stop</button>
+      <button class="btn"        id="btn-sp"    onclick="manualSpace()"  disabled>⎵ Word</button>
+      <button class="btn"        id="btn-bk"    onclick="doBack()"       disabled>⌫</button>
+      <button class="btn danger" id="btn-cl"    onclick="clearAll()"     disabled>🗑</button>
+      <button class="btn"        id="btn-cp"    onclick="copyTxt()"      disabled>📋</button>
+      <button class="btn" id="stbtn" onclick="toggleSettings()" style="margin-left:auto">⚙ <span class="arr">▾</span></button>
+    </div>
+    <div class="settings-acc">
+      <div class="settings-body" id="stbody">
+        <div class="srow">
+          <div class="slbl"><span>Stability frames <small style="color:var(--fog)">(lower=faster)</small></span><span class="sval" id="sv-stab">8</span></div>
+          <input type="range" min="4" max="35" value="8" oninput="STAB=+this.value;$('sv-stab').textContent=this.value;buildRings();$('stab-n').textContent='0/'+this.value">
+          <div class="shints"><span>Fast (4)</span><span>Slow (35)</span></div>
+        </div>
+        <div class="srow">
+          <div class="slbl"><span>Confidence threshold</span><span class="sval" id="sv-conf">40%</span></div>
+          <input type="range" min="20" max="88" value="40" oninput="CONF=this.value/100;$('sv-conf').textContent=this.value+'%'">
+          <div class="shints"><span>Loose (20%)</span><span>Strict (88%)</span></div>
+        </div>
+        <div class="srow">
+          <div class="slbl"><span>Cooldown</span><span class="sval" id="sv-cool">0.7s</span></div>
+          <input type="range" min="0.2" max="3" step="0.1" value="0.7" oninput="COOL=this.value*1000;$('sv-cool').textContent=(+this.value).toFixed(1)+'s'">
+          <div class="shints"><span>0.2s</span><span>3s</span></div>
+        </div>
+        <div class="srow" style="margin-bottom:0">
+          <div class="slbl"><span>Send interval</span><span class="sval" id="sv-send">100ms</span></div>
+          <input type="range" min="60" max="500" step="20" value="100" oninput="SEND_MS=+this.value;$('sv-send').textContent=this.value+'ms'">
+          <div class="shints"><span>Fast (60ms)</span><span>Slow (500ms)</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: sentence builder + predictions -->
+  <div class="rp">
+    <div class="panel-hd"><span class="panel-title">Sentence Builder</span><span style="font-family:var(--mono);font-size:.6rem;color:var(--sky);background:rgba(26,110,240,.08);padding:2px 9px;border-radius:999px;border:1px solid rgba(26,110,240,.2)">● LIVE</span></div>
+
+    <div class="det-block">
+      <div class="det-row">
+        <div class="det-big" id="sb-big">—</div>
+        <div class="det-info">
+          <div class="det-name" id="sb-name">Start camera to detect</div>
+          <div class="cbar"><div class="ctrack"><div class="cfill" id="sb-cf" style="width:0%"></div></div><span class="cpct" id="sb-cp">0%</span></div>
+        </div>
+      </div>
+      <div class="stab-row">
+        <span class="stab-lbl">Stability</span>
+        <div class="stab-track"><div class="stab-fill" id="stab-fill" style="width:0%"></div></div>
+        <span class="stab-n" id="stab-n">0 / 8</span>
+      </div>
+      <div class="word-row">
+        <span class="word-lbl">Word</span>
+        <div class="word-val"><span id="sb-word"></span><span class="cursor" id="sb-cur" style="display:none"></span></div>
+      </div>
+      <div class="sent-lbl">Sentence</div>
+      <div class="sent-area" id="sb-sent"></div>
+    </div>
+
+    <div class="sugg-block">
+      <div class="sugg-lbl">💡 Suggestions</div>
+      <div class="sugg-pills" id="sugg-pills"><span class="sug empty">Sign letters to see suggestions</span></div>
+    </div>
+
+    <div class="sent-actions">
+      <button class="sab add"  id="sab-w"  onclick="commitWord()"  disabled>✓ Add <kbd>Space</kbd></button>
+      <button class="sab save" id="sab-sv" onclick="saveSession()" disabled>💾 Save</button>
+      <button class="sab"      id="sab-d"  onclick="doBack()"      disabled>⌫ <kbd>⌫</kbd></button>
+      <button class="sab clr"  id="sab-c"  onclick="clearAll()"    disabled>✕ <kbd>C</kbd></button>
+      <button class="sab copy" id="sab-cp" onclick="copyTxt()"     disabled>📋</button>
+    </div>
+
+    <div class="pred-block">
+      <div class="pred-main">
+        <div class="pred-ltr" id="pred-ltr">—</div>
+        <div class="pred-desc" id="pred-desc">Start camera</div>
+        <div class="pred-conf"><div class="pc-track"><div class="pc-fill" id="pc-fill"></div></div><span class="pc-pct" id="pc-pct">0%</span></div>
+        <div class="rings" id="rings"></div>
+      </div>
+      <div class="block-title">Top predictions</div>
+      <div id="topn"><div style="font-size:.72rem;color:var(--fog);text-align:center;padding:8px 0">Start camera</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ UPLOAD PAGE ════════════════════════════════════════════ -->
+<div class="page" id="pg-up" style="display:none">
+
+  <!-- LEFT: drop zone + preview -->
+  <div class="up-left">
+    <div class="panel-hd" style="margin:-16px -16px 0;padding:10px 18px"><span class="panel-title">Upload Image or Video</span></div>
+
+    <div class="drop-zone" id="drop-zone"
+         onclick="$('file-inp').click()"
+         ondragenter="onDE(event)" ondragover="onDO(event)"
+         ondragleave="onDL(event)" ondrop="onDD(event)">
+      <input type="file" id="file-inp" accept="image/*,video/*" onchange="loadFile(this.files[0])">
+      <div class="dz-big">📤</div>
+      <div class="dz-title">Drop your file here</div>
+      <div class="dz-sub">or click to browse — any image or video of a hand sign<br><span style="font-size:.72rem;color:var(--sky)">Large phone photos are automatically handled</span></div>
+      <div class="dz-types">
+        <span class="dz-type">.jpg</span><span class="dz-type">.png</span><span class="dz-type">.webp</span>
+        <span class="dz-type">.mp4</span><span class="dz-type">.mov</span><span class="dz-type">.avi</span>
+      </div>
+    </div>
+
+    <div id="prev-wrap">
+      <img id="prev-img" src="" alt="preview">
+      <video id="prev-vid" src="" controls></video>
+      <canvas id="annot-canvas"></canvas>
+      <button class="prev-rm" onclick="removeFile()">✕</button>
+    </div>
+
+    <div class="alert warn" id="api-alert">⚠ Server not running. Start: <strong>python server.py</strong></div>
+
+    <div class="prog-wrap" id="prog-wrap">
+      <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+      <div class="prog-lbl" id="prog-lbl">Processing...</div>
+    </div>
+
+    <button class="analyze-btn" id="analyze-btn" onclick="analyzeFile()" disabled>🔍 Analyze Signs</button>
+
+    <div class="fr-results" id="fr-results">
+      <div class="fr-title">Signs detected</div>
+      <div class="fr-grid" id="fr-grid"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: results -->
+  <div class="up-right">
+    <div class="up-pred-box">
+      <div class="up-big" id="up-big">—</div>
+      <div class="up-desc" id="up-desc">Upload a file to begin</div>
+      <div class="up-cbar cbar">
+        <div class="ctrack"><div class="cfill" id="up-cf" style="width:0%"></div></div>
+        <span class="cpct" id="up-cp">0%</span>
+      </div>
+    </div>
+    <div>
+      <div class="block-title" style="margin-bottom:8px">Top predictions</div>
+      <div id="up-topn"><div style="font-size:.72rem;color:var(--fog);text-align:center;padding:8px 0">Upload a file first</div></div>
+    </div>
+    <div class="txt-card">
+      <div class="txt-hd">
+        <div class="txt-hd-title">Translated text</div>
+        <div class="txt-hd-btns">
+          <button class="ibtn" onclick="copyUpTxt()">📋</button>
+          <button class="ibtn" onclick="$('up-txt').textContent=''">🗑</button>
+        </div>
+      </div>
+      <div id="up-txt"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HISTORY PAGE ════════════════════════════════════════════ -->
+<div class="page" id="pg-hist" style="display:none">
+  <div class="panel">
+    <div class="panel-hd">
+      <span class="panel-title">Translation History</span>
+      <button onclick="loadHistory()" style="padding:3px 10px;border-radius:6px;background:var(--cloud);border:1px solid var(--line);font-size:.67rem;color:var(--slate);cursor:pointer">↻ Refresh</button>
+    </div>
+    <div class="hist-list" id="hist-list">
+      <div style="font-size:.75rem;color:var(--fog);text-align:center;padding:20px">Loading...</div>
+    </div>
+  </div>
+  <div class="stats-side">
+    <div class="panel-title" style="font-size:.64rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--fog);margin-bottom:4px">Statistics</div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-val" id="stat-s">—</div><div class="stat-lbl">Sessions</div></div>
+      <div class="stat-box"><div class="stat-val" id="stat-l">—</div><div class="stat-lbl">Letters</div></div>
+    </div>
+    <div class="stat-box"><div class="stat-val" id="stat-w">—</div><div class="stat-lbl">Total words translated</div></div>
+    <div>
+      <div class="block-title" style="margin-bottom:8px">Most detected letters</div>
+      <div id="top-ltrs" class="word-chips"><span style="font-size:.7rem;color:var(--fog)">No data yet</span></div>
+    </div>
+    <div>
+      <div class="block-title" style="margin-bottom:8px">Most used words</div>
+      <div id="top-words" class="word-chips"><span style="font-size:.7rem;color:var(--fog)">No data yet</span></div>
+    </div>
+    <div style="padding:12px;background:var(--paper);border:1px solid var(--line);border-radius:10px;font-size:.68rem;color:var(--slate);line-height:1.8">
+      <strong style="color:var(--ink);display:block;margin-bottom:4px">About signlens.db</strong>
+      SQLite database in your project folder. Open with <strong>DB Browser for SQLite</strong> (free, sqlitebrowser.org) or use VS Code "SQLite Viewer" extension.
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════
+// SETTINGS
+// ════════════════════════════════════════
+let STAB=8, CONF=0.40, COOL=700, SEND_MS=100;
+
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
+let running=false, camStream=null, animId=null;
+let lastSentAt=0, fpsT=performance.now(), fpsN=0;
+let serverOk=false, pendingReq=false;
+let currentWord='', sentence='';
+let stabLetter=null, stabCount=0, lastAddedAt=0;
+let uploadedFile=null;
+let sid='s'+Math.random().toString(36).slice(2)+Date.now();
+
+// ════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════
+const $=id=>document.getElementById(id);
+let toastT;
+function toast(msg,ms=2000){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),ms);}
+
+// ════════════════════════════════════════
+// SERVER CHECK
+// ════════════════════════════════════════
+async function checkServer(){
+  try{
+    const r=await fetch('/health',{signal:AbortSignal.timeout(2500)});
+    const d=await r.json();
+    serverOk=true;
+    $('srv-badge').className='srv-badge ok';
+    $('srv-txt').textContent=`Server OK · ${d.classes} classes`;
+    loadHistory(); loadStats();
+  }catch(e){
+    serverOk=false;
+    $('srv-badge').className='srv-badge err';
+    $('srv-txt').textContent='Offline — python server.py';
+    $('api-alert').classList.add('show');
+  }
+}
+checkServer();
+
+// ════════════════════════════════════════
+// TAB SWITCHING
+// ════════════════════════════════════════
+function switchTab(t){
+  document.querySelectorAll('.ttab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x=>{x.classList.remove('active');x.style.display='none';});
+  $('ttab-'+t).classList.add('active');
+  const pg=$('pg-'+t);
+  pg.style.display='grid'; pg.classList.add('active');
+}
+
+// ════════════════════════════════════════
+// RINGS
+// ════════════════════════════════════════
+function buildRings(){
+  const c=$('rings');c.innerHTML='';
+  for(let i=0;i<STAB;i++){const d=document.createElement('div');d.className='ring';d.id='rng'+i;c.appendChild(d);}
+}
+buildRings();
+function updateRings(n){for(let i=0;i<STAB;i++){const r=$('rng'+i);if(r)r.classList.toggle('on',i<n);}}
+
+function toggleSettings(){
+  const b=$('stbody'); b.classList.toggle('open');
+  $('stbtn').querySelector('.arr').style.transform=b.classList.contains('open')?'rotate(180deg)':'';
+}
+
+// ════════════════════════════════════════
+// CAMERA
+// ════════════════════════════════════════
+async function startCam(){
+  if(!serverOk){toast('⚠ Run: python server.py first',4000);return;}
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480},facingMode:'user'},audio:false});
+    const vid=$('webcam'),can=$('overlay');
+    vid.srcObject=camStream;
+    vid.addEventListener('playing',()=>{
+      vid.style.opacity='1';
+      can.width=vid.videoWidth||640; can.height=vid.videoHeight||480;
+      $('cam-ph').style.display='none';
+      $('cam-bar').style.display='flex';
+      $('sb-cur').style.display='inline-block';
+      running=true; renderLoop();
+    },{once:true});
+    await vid.play();
+    $('btn-start').className='btn live'; $('btn-start').textContent='● Live';
+    enableCtrls(true); toast('📷 Camera started!');
+  }catch(err){
+    toast(err.name==='NotAllowedError'?'⚠ Camera blocked — allow in browser settings':'⚠ '+err.message,4000);
+  }
+}
+
+function stopCam(){
+  running=false;
+  if(animId){cancelAnimationFrame(animId);animId=null;}
+  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
+  const vid=$('webcam'),can=$('overlay');
+  vid.srcObject=null; vid.style.opacity='0';
+  can.getContext('2d').clearRect(0,0,can.width,can.height);
+  $('cam-ph').style.display='flex'; $('cam-bar').style.display='none';
+  $('sb-cur').style.display='none';
+  $('btn-start').className='btn go'; $('btn-start').textContent='▶ Start Camera';
+  enableCtrls(false); resetPredUI(); setHandStatus(false); toast('⏹ Stopped');
+}
+
+function enableCtrls(on){
+  ['btn-stop','btn-sp','btn-bk','btn-cl','btn-cp','sab-w','sab-sv','sab-d','sab-c','sab-cp'].forEach(id=>{const e=$(id);if(e)e.disabled=!on;});
+}
+
+// ════════════════════════════════════════
+// RENDER LOOP — pendingReq prevents lag
+// ════════════════════════════════════════
+function renderLoop(){
+  if(!running)return;
+  fpsN++;
+  const now=performance.now();
+  if(now-fpsT>=1000){const f=fpsN;fpsN=0;fpsT=now;$('fps-tag').textContent=f+' FPS';$('fps-bar').textContent=f+' FPS';}
+  if(now-lastSentAt>=SEND_MS&&!pendingReq){lastSentAt=now;sendFrame();}
+  animId=requestAnimationFrame(renderLoop);
+}
+
+async function sendFrame(){
+  const vid=$('webcam');
+  if(!vid||vid.readyState<2||vid.paused)return;
+  pendingReq=true;
+  try{
+    const cap=document.createElement('canvas');
+    cap.width=vid.videoWidth||640; cap.height=vid.videoHeight||480;
+    cap.getContext('2d').drawImage(vid,0,0,cap.width,cap.height);
+    const b64=cap.toDataURL('image/jpeg',0.6).split(',')[1];
+    const resp=await fetch('/predict',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({frame:b64,session_id:sid}),signal:AbortSignal.timeout(2500)});
+    if(!resp.ok)return;
+    const data=await resp.json();
+    drawOverlay(data,cap.width,cap.height);
+    handlePrediction(data);
+  }catch(e){}finally{pendingReq=false;}
+}
+
+// ════════════════════════════════════════
+// DRAW OVERLAY
+// ════════════════════════════════════════
+function drawOverlay(data,vw,vh){
+  const can=$('overlay'),ctx=can.getContext('2d');
+  ctx.clearRect(0,0,can.width,can.height);
+  if(!data.detected)return;
+  const conf=data.confidence||0;
+  const sx=can.width/(vw||can.width), sy=can.height/(vh||can.height);
+
+  if(data.landmarks&&data.landmarks.length===21){
+    const lm=data.landmarks;
+    const px=i=>lm[i][0]*can.width, py=i=>lm[i][1]*can.height;
+    const CONN=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],
+                [0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20],[5,9],[9,13],[13,17]];
+    ctx.strokeStyle='rgba(26,110,240,0.5)'; ctx.lineWidth=1.5;
+    CONN.forEach(([a,b])=>{ctx.beginPath();ctx.moveTo(px(a),py(a));ctx.lineTo(px(b),py(b));ctx.stroke();});
+    lm.forEach((pt,i)=>{ctx.beginPath();ctx.arc(pt[0]*can.width,pt[1]*can.height,i===0?5:3,0,Math.PI*2);ctx.fillStyle=i===0?'#1a6ef0':'rgba(75,143,248,.7)';ctx.fill();});
+  }
+
+  if(data.hand_box){
+    const b=data.hand_box;
+    const x1=b.x1*sx,y1=b.y1*sy,x2=b.x2*sx,y2=b.y2*sy,w=x2-x1,h=y2-y1;
+    const a=0.4+conf*0.55;
+    ctx.strokeStyle=`rgba(26,110,240,${a})`; ctx.lineWidth=2; ctx.strokeRect(x1,y1,w,h);
+    const cs=13; ctx.lineWidth=2.5;
+    [[x1,y1,1,1],[x2,y1,-1,1],[x1,y2,1,-1],[x2,y2,-1,-1]].forEach(([cx,cy,dx,dy])=>{
+      ctx.beginPath();ctx.moveTo(cx+dx*cs,cy);ctx.lineTo(cx,cy);ctx.lineTo(cx,cy+dy*cs);ctx.stroke();});
+    if(data.letter&&data.letter!=='nothing'){
+      const lbl=`${data.letter}   ${(conf*100).toFixed(0)}%`;
+      ctx.font='bold 13px DM Mono,monospace';
+      const tw=ctx.measureText(lbl).width+14; const bx=x1,by=Math.max(y1-24,2);
+      ctx.fillStyle='rgba(255,255,255,.92)'; ctx.beginPath(); ctx.roundRect(bx,by,tw,20,4); ctx.fill();
+      ctx.fillStyle=`rgba(26,110,240,${Math.min(1,a+.2)})`;ctx.fillText(lbl,bx+7,by+14);
+    }
+  }
+}
+
+// ════════════════════════════════════════
+// PREDICTION HANDLING
+// ════════════════════════════════════════
+function handlePrediction(data){
+  const hasSign=data.detected&&data.letter&&data.letter!=='nothing'&&data.letter!==null;
+  setHandStatus(hasSign);
+  if(!hasSign){if(stabCount>0){stabCount=Math.max(0,stabCount-2);updateStabUI();}resetPredUI();return;}
+  const letter=data.letter,conf=data.confidence||0;
+  updatePredUI(letter,conf,data.top5||[]);
+  updateSBLetter(letter,conf);
+  if(conf<CONF){stabCount=0;updateStabUI();return;}
+  if(letter===stabLetter)stabCount=Math.min(stabCount+1,STAB);
+  else{stabLetter=letter;stabCount=1;}
+  updateStabUI();updateRings(stabCount);
+  if(stabCount>=STAB&&Date.now()-lastAddedAt>=COOL){
+    commitLetter(letter);lastAddedAt=Date.now();stabCount=0;updateStabUI();
+  }
+}
+
+// ════════════════════════════════════════
+// LETTER / WORD / SENTENCE
+// ════════════════════════════════════════
+function commitLetter(l){
+  if(l==='space'){commitWord();return;}if(l==='del'){doBack();return;}if(l==='nothing')return;
+  currentWord+=l; $('sb-word').textContent=currentWord;
+  flashLetters(); fetchSugg(currentWord); toast(`+ ${l}`,350);
+}
+function commitWord(){
+  if(!currentWord)return;
+  if(sentence&&!sentence.endsWith(' '))sentence+=' ';
+  sentence+=currentWord; currentWord='';
+  $('sb-word').textContent=''; $('sb-sent').textContent=sentence;
+  clearSugg(); toast('✓ Word added',600);
+}
+function insertSugg(w){
+  if(sentence&&!sentence.endsWith(' '))sentence+=' ';
+  sentence+=w; currentWord='';
+  $('sb-word').textContent=''; $('sb-sent').textContent=sentence;
+  clearSugg(); toast(`✓ "${w}"`,700);
+}
+function manualSpace(){commitWord();if(!sentence.endsWith(' '))sentence+=' ';$('sb-sent').textContent=sentence;}
+function doBack(){
+  if(currentWord.length>0){currentWord=currentWord.slice(0,-1);$('sb-word').textContent=currentWord;fetchSugg(currentWord);}
+  else{sentence=sentence.trimEnd();const i=sentence.lastIndexOf(' ');sentence=i>=0?sentence.slice(0,i+1):'';$('sb-sent').textContent=sentence;}
+}
+function clearAll(){
+  currentWord='';sentence='';stabCount=0;stabLetter=null;
+  $('sb-word').textContent='';$('sb-sent').textContent='';
+  updateStabUI();updateRings(0);clearSugg();toast('🗑 Cleared');
+}
+function copyTxt(){
+  const f=(sentence+currentWord).trim();
+  if(!f){toast('Nothing to copy',1500);return;}
+  navigator.clipboard.writeText(f).then(()=>toast('📋 Copied!'));
+}
+
+// ════════════════════════════════════════
+// SAVE SESSION
+// ════════════════════════════════════════
+async function saveSession(){
+  const full=(sentence+currentWord).trim();
+  if(!full){toast('Nothing to save',1500);return;}
+  if(!serverOk){toast('⚠ Server offline',2000);return;}
+  try{
+    const r=await fetch('/save_session',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({sentence:full,source:'webcam',session_id:sid})});
+    const d=await r.json();
+    if(d.saved){toast('✅ Saved!',2000);sid='s'+Math.random().toString(36).slice(2)+Date.now();loadHistory();loadStats();}
+  }catch(e){toast('❌ Could not save',2000);}
+}
+
+// ════════════════════════════════════════
+// SUGGESTIONS
+// ════════════════════════════════════════
+let suggTimer=null;
+async function fetchSugg(prefix){
+  clearTimeout(suggTimer);
+  if(!prefix||prefix.length<1){clearSugg();return;}
+  suggTimer=setTimeout(async()=>{
+    try{const r=await fetch(`/suggest?prefix=${encodeURIComponent(prefix)}`,{signal:AbortSignal.timeout(1500)});const d=await r.json();renderSugg(d.suggestions||[]);}catch(e){clearSugg();}
+  },150);
+}
+function renderSugg(words){
+  const el=$('sugg-pills');
+  if(!words.length){el.innerHTML='<span class="sug empty">No suggestions</span>';return;}
+  el.innerHTML=words.map(w=>`<button class="sug" onclick="insertSugg('${w.replace(/'/g,"\\'")}')">${w}</button>`).join('');
+}
+function clearSugg(){$('sugg-pills').innerHTML='<span class="sug empty">Sign letters to see suggestions</span>';}
+
+// ════════════════════════════════════════
+// UI UPDATE
+// ════════════════════════════════════════
+function updatePredUI(l,c,top5){
+  $('pred-ltr').textContent=l||'—';$('pred-desc').textContent=aslDesc(l);
+  $('pc-fill').style.width=(c*100)+'%';$('pc-pct').textContent=(c*100).toFixed(0)+'%';
+  if(top5&&top5.length)$('topn').innerHTML=top5.map(t=>`<div class="trow"><div class="tltr">${t.letter}</div><div class="tbar"><div class="tfill" style="width:${(t.confidence*100).toFixed(0)}%"></div></div><div class="tpct">${(t.confidence*100).toFixed(0)}%</div></div>`).join('');
+}
+function resetPredUI(){$('pred-ltr').textContent='—';$('pred-desc').textContent='No sign detected';$('pc-fill').style.width='0%';$('pc-pct').textContent='0%';}
+function updateSBLetter(l,c){$('sb-big').textContent=l;$('sb-name').textContent=aslDesc(l);$('sb-cf').style.width=(c*100)+'%';$('sb-cp').textContent=(c*100).toFixed(0)+'%';}
+function updateStabUI(){const p=STAB>0?(stabCount/STAB*100):0;$('stab-fill').style.width=p+'%';$('stab-n').textContent=`${stabCount} / ${STAB}`;}
+function flashLetters(){[$('pred-ltr'),$('sb-big')].forEach(el=>{el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),230);});}
+function setHandStatus(on){$('hdot').className='hdot '+(on?'on':'off');$('htext').textContent=on?'Hand detected ✓':'No hand in frame';}
+
+// ════════════════════════════════════════
+// KEYBOARD
+// ════════════════════════════════════════
+document.addEventListener('keydown',e=>{
+  if(!running)return;
+  if(e.key===' '){e.preventDefault();commitWord();}
+  else if(e.key==='Backspace'){e.preventDefault();doBack();}
+  else if(e.key.toLowerCase()==='c'&&!e.ctrlKey&&!e.metaKey)clearAll();
+});
+
+// ════════════════════════════════════════
+// DRAG AND DROP
+// ════════════════════════════════════════
+function onDE(e){e.preventDefault();$('drop-zone').classList.add('drag');}
+function onDO(e){e.preventDefault();e.dataTransfer.dropEffect='copy';}
+function onDL(e){e.preventDefault();if(!$('drop-zone').contains(e.relatedTarget))$('drop-zone').classList.remove('drag');}
+function onDD(e){
+  e.preventDefault();$('drop-zone').classList.remove('drag');
+  const f=e.dataTransfer.files[0];
+  if(!f){toast('⚠ No file detected');return;}
+  if(!f.type.match(/image.*/)&&!f.type.match(/video.*/)){toast('⚠ Images and videos only',3000);return;}
+  loadFile(f);
+}
+
+// ════════════════════════════════════════
+// FILE UPLOAD
+// ════════════════════════════════════════
+function loadFile(file){
+  if(!file)return; uploadedFile=file;
+  const url=URL.createObjectURL(file),isVid=file.type.startsWith('video/');
+  $('prev-wrap').style.display='block'; $('drop-zone').style.display='none';
+  $('prev-img').style.display=isVid?'none':'block';
+  $('prev-vid').style.display=isVid?'block':'none';
+  $('annot-canvas').style.display='none';
+  if(isVid)$('prev-vid').src=url; else $('prev-img').src=url;
+  $('analyze-btn').disabled=false;
+  $('fr-results').style.display='none'; $('up-txt').textContent='';
+  $('prog-wrap').style.display='none'; setUpPred('—','',0,[]);
+  toast(`📁 ${file.name}`,2000);
+}
+function removeFile(){
+  uploadedFile=null; $('prev-wrap').style.display='none'; $('drop-zone').style.display='block';
+  $('analyze-btn').disabled=true; $('file-inp').value='';
+  $('prog-wrap').style.display='none'; $('fr-results').style.display='none';
+  setUpPred('—','Upload a file to begin',0,[]);
+}
+
+async function analyzeFile(){
+  if(!uploadedFile){toast('⚠ No file loaded');return;}
+  if(!serverOk){toast('⚠ Server offline',4000);return;}
+  const btn=$('analyze-btn'),fill=$('prog-fill'),lbl=$('prog-lbl');
+  const isVid=uploadedFile.type.startsWith('video/');
+  btn.disabled=true; btn.textContent='⏳ Analyzing...';
+  $('prog-wrap').style.display='block';
+  fill.style.width='10%'; fill.style.background=''; lbl.textContent='Uploading...';
+  try{
+    // KEY: NO Content-Type header on FormData — browser sets it with correct boundary
+    const fd=new FormData(); fd.append('file',uploadedFile);
+    fill.style.width='40%'; lbl.textContent=isVid?'Processing frames...':'Detecting hand...';
+    const resp=await fetch(isVid?'/predict_video':'/predict_image',{method:'POST',body:fd});
+    if(!resp.ok){const e=await resp.json().catch(()=>({error:'HTTP '+resp.status}));throw new Error(e.error||'Server error');}
+    const data=await resp.json();
+    fill.style.width='100%'; lbl.textContent='✓ Done!';
+    if(isVid)showVideoResult(data); else showImageResult(data);
+    toast('✓ Analysis complete!');
+  }catch(e){
+    lbl.textContent='❌ '+e.message; fill.style.background='#e83a4c';
+    toast('❌ '+e.message,4000); console.error(e);
+  }
+  btn.disabled=false; btn.textContent='🔍 Analyze Again';
+}
+
+function showImageResult(data){
+  if(!data.detected||!data.letter||data.letter==='nothing'){
+    setUpPred('?','No hand detected — ensure hand is clearly visible',0,[]);
+    $('up-txt').textContent='No hand found in image.';
+    toast('No hand found — try a different photo',4000); return;
+  }
+  setUpPred(data.letter,aslDesc(data.letter),data.confidence,data.top5||[]);
+  $('up-txt').textContent=data.letter;
+  const img=$('prev-img'),can=$('annot-canvas');
+  can.width=img.naturalWidth||640; can.height=img.naturalHeight||480;
+  const ctx=can.getContext('2d'); ctx.drawImage(img,0,0);
+  if(data.hand_box){
+    const b=data.hand_box;
+    ctx.strokeStyle='#1a6ef0'; ctx.lineWidth=Math.max(2,can.width*.004);
+    ctx.strokeRect(b.x1,b.y1,b.x2-b.x1,b.y2-b.y1);
+    ctx.font=`bold ${Math.round(can.width*.042)}px DM Mono,monospace`;
+    ctx.fillStyle='rgba(255,255,255,.9)';
+    ctx.fillRect(b.x1,Math.max(b.y1-28,0),180,24);
+    ctx.fillStyle='#1a6ef0';
+    ctx.fillText(`${data.letter}  ${(data.confidence*100).toFixed(0)}%`,b.x1+6,Math.max(b.y1-8,16));
+  }
+  can.style.display='block'; img.style.display='none';
+}
+
+function showVideoResult(data){
+  if(!data.frames||!data.frames.length){$('up-txt').textContent='No signs detected.';toast('No signs detected',2500);return;}
+  $('fr-results').style.display='block';
+  $('fr-grid').innerHTML=data.frames.map(f=>`<div class="fr-pill"><span class="fr-ltr">${f.letter}</span><span class="fr-conf">${(f.confidence*100).toFixed(0)}%</span></div>`).join('');
+  $('up-txt').textContent=data.sentence||'';
+  if(data.frames[0])setUpPred(data.frames[0].letter,'',data.frames[0].confidence,data.frames[0].top5||[]);
+}
+
+function setUpPred(l,d,c,top5){
+  $('up-big').textContent=l; $('up-desc').textContent=d;
+  $('up-cf').style.width=(c*100)+'%'; $('up-cp').textContent=(c*100).toFixed(0)+'%';
+  if(top5&&top5.length)$('up-topn').innerHTML=top5.map(t=>`<div class="trow"><div class="tltr">${t.letter}</div><div class="tbar"><div class="tfill" style="width:${(t.confidence*100).toFixed(0)}%"></div></div><div class="tpct">${(t.confidence*100).toFixed(0)}%</div></div>`).join('');
+}
+function copyUpTxt(){const t=$('up-txt').textContent.trim();if(!t){toast('Nothing to copy',1500);return;}navigator.clipboard.writeText(t).then(()=>toast('📋 Copied!'));}
+
+// ════════════════════════════════════════
+// HISTORY + STATS
+// ════════════════════════════════════════
+async function loadHistory(){
+  try{
+    const r=await fetch('/history'),d=await r.json();
+    const el=$('hist-list');
+    if(!d.history||!d.history.length){el.innerHTML='<div style="font-size:.75rem;color:var(--fog);text-align:center;padding:24px 0">No saved translations yet.<br>Sign something and click 💾 Save!</div>';return;}
+    el.innerHTML=d.history.map(h=>`<div class="hist-entry" id="he-${h.id}">
+      <div class="hist-sent">${esc(h.sentence)}</div>
+      <div class="hist-meta"><span>${fmtDate(h.created_at)}</span><span class="hist-src">${h.source||'webcam'}</span><span>${h.word_count} word${h.word_count!==1?'s':''}</span></div>
+      <button class="hist-del" onclick="delSession(${h.id})">✕</button>
+    </div>`).join('');
+  }catch(e){}
+}
+async function delSession(id){
+  try{await fetch('/history/'+id,{method:'DELETE'});const el=$('he-'+id);if(el){el.style.opacity='0';el.style.transition='opacity .2s';setTimeout(()=>el.remove(),200);}toast('Deleted',1200);loadStats();}catch(e){}
+}
+async function loadStats(){
+  try{
+    const r=await fetch('/stats'),d=await r.json();
+    $('stat-s').textContent=d.total_sessions||0;
+    $('stat-l').textContent=d.total_letters||0;
+    $('stat-w').textContent=d.total_words||0;
+    if(d.top_letters&&d.top_letters.length)$('top-ltrs').innerHTML=d.top_letters.map(l=>`<span class="wchip"><span class="wval">${l.letter}</span><span class="wfreq">${l.count}×</span></span>`).join('');
+    if(d.top_words&&d.top_words.length)$('top-words').innerHTML=d.top_words.map(w=>`<span class="wchip"><span class="wval" style="color:var(--mint)">${w.word}</span><span class="wfreq">${w.freq}×</span></span>`).join('');
+  }catch(e){}
+}
+
+// ════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════
+function fmtDate(iso){try{return new Date(iso).toLocaleDateString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}catch(e){return iso;}}
+function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+function aslDesc(l){
+  const m={A:'Closed fist',B:'Flat hand',C:'Curved C',D:'Index up',E:'Fingers curled',F:'OK sign',G:'Point side',H:'2 fingers side',I:'Pinky up',J:'Pinky hook',K:'2 fingers up',L:'L-shape',M:'3/thumb',N:'2/thumb',O:'Round O',P:'K down',Q:'G down',R:'Crossed fingers',S:'Fist/thumb',T:'Thumb between',U:'2 fingers up',V:'Peace sign',W:'3 fingers',X:'Hooked index',Y:'Pinky+thumb',Z:'Traces Z',space:'Space',del:'Delete',nothing:'Unclear'};
+  return m[l]||'';
+}
+</script>
+</body>
+</html>
